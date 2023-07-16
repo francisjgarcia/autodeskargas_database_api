@@ -1,0 +1,49 @@
+version: '3.8'
+services:
+  database_api_bd:
+    container_name: database_api_bd
+    image: mariadb:10.9.3
+    environment:
+      - MARIADB_DATABASE=${DATABASE_NAME:-autodeskargas_db}
+      - MARIADB_USER=${DATABASE_USER:-username}
+      - MARIADB_PASSWORD=${DATABASE_PASSWORD:-p4ssw0rd}
+      - MARIADB_ROOT_PASSWORD=${DATABASE_ROOT_PASSWORD:-r00tp4ssw0rd}
+      - TZ=${DATABASE_TIMEZONE:-Europe/Madrid}
+    ports:
+      - ${DATABASE_PORT:-3306}:3306
+    volumes:
+      - ../data/mysql:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqlshow", "${DATABASE_NAME:-dbautodescargas}", "--user=${DATABASE_USER:-username}", "--password=${DATABASE_PASSWORD:-p4ssw0rd}"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    # deploy:
+    #   resources:
+    #     limits:
+    #       memory: 200M
+    #     reservations:
+    #       memory: 100M
+    restart: on-failure:5
+
+  database_api:
+    container_name: database_api
+    image: ${DATABASE_API_IMAGE_NAME:-database_api}:latest
+    build:
+      context: ..
+      dockerfile: deployments/Dockerfile
+    ports:
+      - ${DATABASE_API_EXPOSE_PORT:-8000}:8000
+    volumes:
+      - ../app:/usr/src/app
+    env_file:
+      - ../app/.env
+    # deploy:
+    #   resources:
+    #     limits:
+    #       memory: 200M
+    #     reservations:
+    #       memory: 100M
+    depends_on:
+      - database_api_bd
+    restart: on-failure:5
